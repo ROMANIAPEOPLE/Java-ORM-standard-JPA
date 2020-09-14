@@ -12,14 +12,15 @@ public class JpaMain {
 
         try{
 
-            Member member1 = new Member(150L, "A");
-            Member member2 = new Member(160L, "B");
+            Member member =em.find(Member.class,150L);
+            member.setName("AAAAA");
 
-            //영속성 컨텍스트에 쌓아두고,
-            em.persist(member1);
-            em.persist(member2);
+            //detach는 영속성으로 더이상 관리하지 않겠다는 뜻으로,
+            //JPA가 더이상 관리하지 않음. update등등 불가능
+            em.detach(member);
 
-            //커밋 시점에 SQL문이 실행된다.
+
+
             tx.commit();
         }catch (Exception e) {
             tx.rollback();
