@@ -4,6 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>jpa-basic</groupId>
     <artifactId>ex1-hello-jpa</artifactId>
+    <packaging>pom</packaging>
     <version>1.0.0</version>
 
     <build>
@@ -53,7 +54,7 @@
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
-            <version>1.4.200</version>
+            <version>1.4.199</version>
         </dependency>
     </dependencies>
 </project>
