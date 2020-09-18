@@ -5,9 +5,9 @@ import javax.persistence.*;
 
 //고급매핑: 상속
 @Entity
-@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 @DiscriminatorColumn
-public class Item {
+public abstract class Item {
 
     @Id @GeneratedValue
     private Long id;
