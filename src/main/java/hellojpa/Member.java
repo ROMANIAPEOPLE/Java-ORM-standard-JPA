@@ -5,12 +5,13 @@ import lombok.Getter;
 import lombok.Setter;
 
 import javax.persistence.*;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 @Entity
 @Getter
 @Setter
-public class Member {
+public class Member extends BaseEntity {
     @Id //PK(기본키 맵핑)
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name= "MEMBER_ID")
@@ -32,5 +33,9 @@ public class Member {
         this.team = team;
         team.getMembers().add(this);
     }
+
+
+
+
 
 }
