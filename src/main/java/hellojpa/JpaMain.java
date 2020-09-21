@@ -13,17 +13,24 @@ public class JpaMain {
 
         try{
 
+            Team team =new Team();
+            team.setName("TeamA");
+            em.persist(team);
+
             Member member = new Member();
             member.setUsername("hello");
+            member.setTeam(team);
             em.persist(member);
             em.flush();
             em.clear();
 
-            Member findMember = em.getReference(Member.class, member.getId());
+            Member m = em.find(Member.class, member.getId());
 
-            //DB 조회는 여기서 실행된다. (프록시가 username을 가지고있지 않기 때문에)
-            System.out.println("findMember.username= " + findMember.getUsername());
+            System.out.println("m = " + m.getTeam().getClass());
 
+            System.out.println("=======================");
+            m.getTeam().getName(); //초기화, LAZY면 여기서 Team 조회
+            System.out.println("=======================");
 
 
             tx.commit();
