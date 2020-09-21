@@ -7,7 +7,7 @@ import lombok.Setter;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
-import java.util.Date;
+import java.util.*;
 
 @Entity
 @Getter
@@ -37,6 +37,19 @@ public class Member extends BaseEntity {
     //주소 Address
     @Embedded
     private Address address;
+
+    @ElementCollection
+    @CollectionTable(name ="FAVORITE_FOOD", joinColumns =
+    @JoinColumn(name= "MEMBER_ID"))
+    @Column(name = "FOOD_NAME")
+    private Set<String> favoriteFoods = new HashSet<>();
+
+    @ElementCollection
+    @CollectionTable(name = "ADDRESS" , joinColumns =
+    @JoinColumn(name = "MEMBER_ID"))
+    private List<Address> addressHistory = new ArrayList<>();
+
+
 
 
     public void changeTeam(Team team){
