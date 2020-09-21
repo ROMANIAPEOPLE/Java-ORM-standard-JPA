@@ -22,6 +22,7 @@ public class Member extends BaseEntity {
     private String username;
 
 
+    private int age;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name="TEAM_ID")
