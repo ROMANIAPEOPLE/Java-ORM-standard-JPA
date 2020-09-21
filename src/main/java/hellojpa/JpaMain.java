@@ -13,24 +13,15 @@ public class JpaMain {
 
         try{
 
-            Team team =new Team();
-            team.setName("TeamA");
-            em.persist(team);
+            Child child1 = new Child();
+            Child child2 = new Child();
 
-            Member member = new Member();
-            member.setUsername("hello");
-            member.setTeam(team);
-            em.persist(member);
-            em.flush();
-            em.clear();
+            Parent parent = new Parent();
+            parent.addChild(child1);
+            parent.addChild(child2);
 
-            Member m = em.find(Member.class, member.getId());
+            em.persist(parent);
 
-            System.out.println("m = " + m.getTeam().getClass());
-
-            System.out.println("=======================");
-            m.getTeam().getName(); //초기화, LAZY면 여기서 Team 조회
-            System.out.println("=======================");
 
 
             tx.commit();
