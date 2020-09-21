@@ -13,11 +13,15 @@ public class JpaMain {
 
         try{
 
-            List<Member> result = em.createQuery(
-                    "select m From Member m where m.username like '%kim%'",
-                    Member.class
-            ).getResultList();
+            Member member = new Member();
+            member.setUsername("member1");
+            em.persist(member);
 
+            TypedQuery<Member> query = em.createQuery("select m from Member m where m.username =:username",
+                    Member.class);
+            query.setParameter("username","member1");
+            Member singleResult = query.getSingleResult();
+            System.out.println("singleResult =" + singleResult);
 
 
             tx.commit();
