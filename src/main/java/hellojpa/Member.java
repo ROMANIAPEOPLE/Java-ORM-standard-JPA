@@ -1,6 +1,7 @@
 package hellojpa;
 
 
+import jdk.vm.ci.meta.Local;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -27,6 +28,15 @@ public class Member extends BaseEntity {
     @OneToOne
     @JoinColumn(name ="LOCKER_ID")
     private Locker locker;
+
+    //기간 Period
+
+    @Embedded
+    private Period period;
+
+    //주소 Address
+    @Embedded
+    private Address address;
 
 
     public void changeTeam(Team team){
