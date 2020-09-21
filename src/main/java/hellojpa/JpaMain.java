@@ -13,21 +13,16 @@ public class JpaMain {
 
         try{
 
-            Team team = new Team();
-            team.setName("TeamA");
-            em.persist(team);
-
             Member member = new Member();
-            member.setUsername("member1");
+            member.setUsername("hello");
+            em.persist(member);
+            em.flush();
+            em.clear();
 
-            //연관관계 편의메소드
-            member.changeTeam(team);
+            Member findMember = em.getReference(Member.class, member.getId());
 
-
-            Team findTeam = em.find(Team.class, team.getId()); //1차 캐시에 있음
-            List<Member> members = findTeam.getMembers();
-            //아직 DB에는 쿼리문이 쏴지기 전이고, 1차캐시에만 있는 상태임. 따라서 연관관계 편의메서드를
-            //사용하지 않으면, team에 어떤 member가 속해있는지 추출할 수 없음.
+            //DB 조회는 여기서 실행된다. (프록시가 username을 가지고있지 않기 때문에)
+            System.out.println("findMember.username= " + findMember.getUsername());
 
 
 
@@ -39,5 +34,13 @@ public class JpaMain {
         }
         emf.close();
 
+    }
+
+    private static void printMemberAndTeam(Member member) {
+        String username = member.getUsername();
+        System.out.println("username = " + username);
+
+        Team team = member.getTeam();
+        System.out.println("team=" + team);
     }
 }
