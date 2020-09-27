@@ -13,6 +13,8 @@ import java.util.List;
  * 이 때, Team의 FetchType을 Lazy로 설정해준다면 Member를 조회할때 Team이 조회되지 않는다.
  * 결론적으로, 실무에서 EAGER(즉시로딩)은 99프로 사용하지 말아야한다.
  *
+ * **CaseCade란
+ * 특정 엔티티를 영속 상태로 만들 때 연관된 엔티티도 함께 영속상태로 만들고 싶을때 사용하는 것. 지연로딩,즉시로딩과는 아무런 관련이 없음
  */
 
 public class JpaMain {
