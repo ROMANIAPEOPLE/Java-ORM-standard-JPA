@@ -7,3 +7,4 @@ JAPA ORM 표준 JPA 프로그래밍 이론편
     내용
   </div>
 </details>
+![1차캐시](C:\Users\jungk\Desktop\KH\JPA-BASIC\images\1차캐시.PNG)
