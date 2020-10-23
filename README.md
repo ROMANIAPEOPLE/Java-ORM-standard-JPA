@@ -50,7 +50,8 @@ JAPA ORM 표준 JPA 프로그래밍 이론편
 
 2. 영속(managed) 상태 : 영속성 컨텍스트에 **관리** 되는 상태
 
-   [영속 이미지]
+  ![영속상태](https://user-images.githubusercontent.com/39195377/97031995-0cdfb100-159c-11eb-8bf9-e03d3a4b43eb.PNG)
+
 
    -영속성 컨텍스트에 저장되어있는 상태
 
@@ -93,7 +94,7 @@ JAPA ORM 표준 JPA 프로그래밍 이론편
 
 ★1차캐시 : 영속성 컨텍스트에는 1차캐시라는것이 존재하는데, 1차캐시를 영속성 컨텍스트라고 이해해도 좋다.
 
-[1차캐시 이미지]
+![1차캐시](https://user-images.githubusercontent.com/39195377/97031946-00f3ef00-159c-11eb-9a44-cdbbc0414d51.PNG)
 
 ```java
 //엔티티를 생성한 상태(비영속) 
@@ -143,7 +144,7 @@ transaction.commit(); // Transaction 커밋
 
 ```
 
-[쓰기지연 이미지]
+![쓰기지연](https://user-images.githubusercontent.com/39195377/97031981-09e4c080-159c-11eb-95e1-bdf569314fb8.PNG)
 
 쓰기지연은 아래와 같은 메커니즘으로 실행된다.
 
@@ -183,7 +184,7 @@ transaction.commit(); // Transaction 커밋
 
 **(실무에서는 set 사용을 지양해야 한다.)**
 
-[변경감지 이미지]
+![변경감지](https://user-images.githubusercontent.com/39195377/97031963-04877600-159c-11eb-830d-96fa1dbff703.PNG)
 
 변경 감지는 아래와같은 매커니즘으로 동작한다.
 
