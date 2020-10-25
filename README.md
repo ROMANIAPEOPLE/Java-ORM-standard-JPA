@@ -372,9 +372,11 @@ List<Member> members = query.getResultList();
        
       
       
-      ### 기본 키 매핑
-
-
+  
+  
+ 
+ ### 기본 키 매핑
+ 
 
 1. 직접 할당 : @Id만 사용
 
