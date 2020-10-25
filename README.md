@@ -227,3 +227,151 @@ List<Member> members = query.getResultList();
   </div>
 </details>
 
+<details>
+  <summary>1. 객체와 DB의 기본적인 매핑 방법</summary>
+  <div markdown="1">
+    # 객체와 DB의 기본적인 매핑 방법
+
+### 엔티티 매핑
+
+1. ##### @Entity
+
+   -@Entity가 붙은 클래스는 JPA가 관리하는 '엔티티' 라고 부른다.
+
+   -JPA를 사용해서 테이블과 매핑할 클래스에는 필수적으로 @Entity를 붙여야 한다.
+
+   - @Entity 사용시 주의사항
+
+     - 기본 생성자 필수
+
+     => 자바에서는 기본 생성자를 자동으로 생성해준다. 하지만 임의로 파라미터가 있는 생성자를 사용할 경우 기본 생성자를 직접 생성해줘야 한다.
+
+     - final class, enum, interface, inner class는 @Entity로 엔티티 등록을 할 수없다.
+
+     - DB에 저장할 필드는 final로 선언하면 안된다.
+
+     
+
+   - Entity 속성
+
+     - @Entity(name = "Member") 
+
+       => JPA에서 사용할 엔티티 이름을 지정한다. 기본값은 [클래스 이름] 이며, **가급적이면 기본값을 사용하는것이 좋다.**
+
+     - 기본값은 그냥 @Entity만 선언하면 된다.
+
+2. 필드와 컬럼 매핑
+
+   ex) 1. 회원은 일반 회원과 관리자로 구분해야 한다.
+
+    	2. 회원 가입일과 수정일이 있어야 한다.
+
+    	3. 회원을 설명할 수 있는 필드가 있어야 한다. 이 필드는 길이 제한이 없다.
+
+   ```java
+   public enum RoleType {
+     USER, ADMIN
+   }
+   //회원 권한 설정을 위한 enum 타입
+   ```
+
+   
+
+   ```java
+   @Entity
+   @Table(name = "MBR")
+   public class Member {
+     @Id
+     private Long id;
+   
+     @Column(name = "name")
+     private String username;
+   
+     private Integer age;
+   
+     @Enumerated(EnumType.String)
+     private RoleType roleType;
+   
+     @Temporal(TemporalType.TIMESTAMP)
+     private Date createDate;
+   
+     @Temporal(TemporalType.TIMESTAMP)
+     private Date lastModifiedDate;
+   
+     @Lob
+     private String description;
+   
+     @Transient
+     private int temp;
+   
+     public Member() {
+   
+     }
+   }
+   ```
+
+   - @Id 사용
+
+     - 기본키 (PK) 매핑시 사용하며, 기본키에 사용한다.
+
+   - @Column
+
+     - @Column(name = "name") : 객체명과 DB의 컬럼명을 다르게 하고 싶은 경우, DB 컬럼명으로 설정할 이름을 name의 속성으로 적는다.
+
+       =>예를들어, 객체의 이름은 username인데 DB에는 name으로 저장하고 싶을때
+
+     - updatable
+
+       컬럼을 수정했을 때 DB에 추가를 할 것인지 여부를 선택한다.
+
+       @Column(updatable = false) 인 경우, 변경이 되어도 DB에 반영하지 않는다.
+
+     - nullable
+
+       @Column(nullable = false) : NOT NULL 제약조건이 된다.
+
+     - unique
+
+       잘 사용하지 않는다. 그 이유는 ```constraint UK_ewkrjwel239flskdfj01 unique (name) ```과 같이 유니크 네임을 랜덤으로 생성하기 때문이다.
+
+     - length
+
+       문자 길이 제약조건으로, String 타입에만 사용할 수 있다.
+
+   - @Enumerated
+
+     - Enum Type 매핑
+
+       Enum 객체 사용시 해당 어노테이션을 사용해야 한다.
+
+       DB에는 Enum Type이 존재하지 않으므로 (비슷한건 존재함) 반드시 붙여줘야한다.
+
+     - EnumType에는 두가지 속성이 있는데, ORDINAL과 String이 있다.
+
+       ORDINAL은 enum의 순서를 DB에 저장하는 것이고(기본값), String은 enum의 이름대로 DB에 저장하는 것이다.
+
+       **실무에서는 반드시 EnumType.String을 사용하자. 그 이유는 새로운 요구사항이 추가될때 그 새로운 요구사항을 enum class의 맨 앞에 추가할 경우 순서가 변경되어 저장되기 때문이다.**
+
+   - Tempora
+
+     - 날짜 Type에 붙여주는 어노테이션이다.
+     - **<u>java8의 도입과 동시에 LocalDate(date), 와 LocalDateTime(timestamp)가 도입되면서, 사용할 일이 없어졌다.</u>**
+
+   - Lob
+
+     - DB에서 varchar를 넘어서는 큰 내용을 넣고 싶은 경우 해당 annotation을 사용
+     - @Lob에는 지정할 수 있는 속성이 없다.
+
+   - @Transient
+
+     - 특정 필드를 컬럼에 매핑하지 않음 (DB저장,조회 불가능)
+
+     - DB에 관계없이 메모리에서만 사용하고자 하는 객체에 해당 annotation을 사용
+
+       즉, 메모리상에서만 임시로 어떠한 값을 보관하고 싶을때 사용한다.
+  </div>
+</details>
+
+
+
+
