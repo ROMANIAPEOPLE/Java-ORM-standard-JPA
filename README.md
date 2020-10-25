@@ -228,7 +228,7 @@ List<Member> members = query.getResultList();
 </details>
 
 <details>
-  <summary>1. 객체와 DB의 기본적인 매핑 방법</summary>
+  <summary>2. 객체와 DB의 기본적인 매핑 방법</summary>
   <div markdown="1">
     # 객체와 DB의 기본적인 매핑 방법
 
