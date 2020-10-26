@@ -658,10 +658,165 @@ Team findTeam = findMember.getTeam();
 ```
 
 
+3. 객체 지향 모델링(객체의 연관관계 사용) - 양방향 연결관계
+
+  ![양방향](https://user-images.githubusercontent.com/39195377/97143841-c5794080-17a6-11eb-95ca-0486d4b1b890.PNG)
+
+   ```java
+   @Entity
+   public class Member { 
+   
+       @Id @GeneratedValue    
+       private Long id;
+   
+       @Column(name = "USERNAME")    
+       private String name;    
+       private int age;
+   
+       @ManyToOne    
+       @JoinColumn(name = "TEAM_ID")    
+       private Team team;
+       
+      ...
+   ```
+
+   Team 엔티티에 컬렉션을 추가하면 양방향 매핑 완료
+
+   ```java
+   @Entity
+   public class Team{
+       @Id @GeneratedValue
+       private Long id;
+       private Sting name;
+       @OneToMany(mappedBy = "team")
+       List<Member> members =new ArrayList<Member>();
+   }
+   ```
+
+   ex)
+
+   ```java
+   Team findTeam = entityManaer.find(Team.class, team.getId);
+   int memberSize = findTeam.getMembers.size();
+   ```
+
+- 아래 그림처럼 객체 기준으로 보았을때는  Member -> Team , Team -> Member 로 단방향이 2개가 있다고 생각하면 된다.
+
+- 그러나 테이블 연관관계는  Member <=> Team 으로, 하나의 양방향 관계를 이룬다.
+
+- 즉, 객체의 양방향 관계는 사실 양방향 관계가 아니라 서로 다른 단방향 관계 2개이다.
+
+ ![객체는단방향테이블은양방향](https://user-images.githubusercontent.com/39195377/97143808-b72b2480-17a6-11eb-9d0a-a9195d100bfd.PNG)
+
+
+
+#### 테이블은 양방향 연관관계에서 '외래키'라는 것으로 관리해야한다.
+
+- 테이블은 외래키 하나로 두 테이블의 연관관계를 관리한다.
+- 위 예제에서는 두 테이블을 관리하는 외래키로 'TEAM_ID'를 사용하고 있다.
+- **연관관계의 주인을 정하자.**
+
+
+
+#### 연관관계의 주인을 정하자.
+
+- 객체의 두 관계중 하나를 연관관계의 주인으로 지정
+- 연관관계의 주인만이 외래키를 관리한다.
+- 주인이 아닌쪽은 읽기만 가능(읽기 전용) 하다.
+- 주인인 쪽인 mappedBy 속성을 사용하면 안된다.
+- 주인이 아닌쪽에서 mappedBy 속성으로 주인을 지정해줘야 한다.
+- **<u>그렇다면, 누구를 주인으로 설정해야 할까?</u>**
+
+#### 연관관계의 주인은 **항상** , **무조건**  '다' 쪽으로 설정하자!
+
+![멤버가연고나관계주인](https://user-images.githubusercontent.com/39195377/97143814-b8f4e800-17a6-11eb-87d5-373e20cb3d70.PNG)
+
+
+
+
+★양방향 매핑시 가장 많이하는 실수 : 연관관계의 주인에 값을 입력하지 않는다.
+
+```java
+Team team = new Team();
+team.setName("TeamA");
+entityManager.persist(team);
+
+Member member = new Member();
+member.setName("member1");
+
+//역방향(주인이 아닌 쪽)만 연관관계를 설정
+team.getMembers().add(member);
+
+entityManager.persist(member);
+
+```
+
+
+
+- mappedBy는 단순히 읽기 전용이다.
+- 만약 Member를 생성하고 Team을 생성한 다음 Team에있는 mappedBy와 매핑된 컬렉션에 member의 값을 세팅해도, 아래 결과처럼 Member DB에는 아무런 변화가 없다.
+
+![결과1](https://user-images.githubusercontent.com/39195377/97143813-b85c5180-17a6-11eb-89a3-8c8077791eb7.PNG)
+
+
+
+양방향 매핑시 연관관계의 주인에 값을 입력해야한다.
+
+```java
+Team team = new Team();
+team.setName("TeamA");
+entityManager.persist(team);
+
+Member member = new Member();
+member.setName("member1");
+
+team.getMembers().add(memeber);
+//연관관계의 주인에 값 설정
+member.setTeam(team);
+
+entityManager.persist(member);
+```
+
+이렇에 연관관계의 주인에 값을 입력하면 정상적으로 DB에 저장된다.
+
+![겨로가2](https://user-images.githubusercontent.com/39195377/97143811-b85c5180-17a6-11eb-9beb-e968124b908e.PNG)
+
+
+**하지만 순수한 객체 관계를 고려한 객체지향적 설계를 위해 양쪽 모두 값을 넣어주는 습관들 들이자.**
+
+- 주인이 아닌쪽과 주인인 쪽 모두 값을 넣어주는 연관관계 매핑 메서드를 만들자.
+
+```java
+ public void changeTeam(Team team){
+        this.team = team;
+        team.getMembers().add(this);
+    }
+```
+
+
+
+
+
+
+
+#### 정리
+
+★단방향 매핑와 양방향 매핑은 어렵게 생각할 필요 없이,
+
+-  일단 먼저 단방향 매핑으로 설계를 하자.
+- 그 다음에, 양방향이 필요할때 추가하도록 하자
+- 이렇게 설계해도 테이블에는 전혀 영향을 주지 않는다. 
+
+
+
 
 
   </div>
 </details>
+
+
+
+
 
 
 
