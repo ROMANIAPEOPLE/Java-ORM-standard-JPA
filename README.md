@@ -1,10 +1,10 @@
 # Java-ORM-standard-JPA
-JAPA ORM 표준 JPA 프로그래밍 이론편
+
 
 <details>
   <summary>1.영속성 컨텍스트</summary>
   <div markdown="1">
-  # 자바 ORM 표준 JPA 프로그래밍
+  
 
 ### 1. 영속성 컨텍스트
 
@@ -462,6 +462,204 @@ List<Member> members = query.getResultList();
 - int : 0이 있다.
 - Integer : 10억 정도 까지만 가능하다
 - Long : 이걸 사용하자!
+  </div>
+</details>
+
+
+<details>
+  <summary>3.단방향 연관관계와 매핑의 기초</summary>
+  <div markdown="1">
+    # 단방향 연관관계와 매핑의 기초
+
+### 목표
+
+- 객체와 테이블 연관관계의 차이를 이해한다.
+- 객체의 참조와 테이블의 외래키를 어떻게 매핑하는지 이애햐한다.
+- 방향과 매핑종류, 연관관계 주인이라는 용어를 이해한다.
+  - 단방향, 양방향
+  - 다대일(N:1) , 일대다(1:N), 일대일(1:1) , 다대다(N:N)
+  - 연관관계의 주인(Owner)
+    - 객체의 양방향 연관관계에서는 관리하는 주인이 필요하다.
+
+
+
+### 예제 시나리오
+
+- 회원과 팀이 있다
+
+- 회원은 하나의 팀에만 소속될 수 있다.
+
+- 회원과 팀은 다대일(N:1) 관계이다.
+
+  ->  여러 회원이 하나의 팀에 속할 수 있다.
+
+
+
+1. 객체를 테이블에 맞추어 모델링하기 (연관관계가 없는 객체)
+![객체를 테이블메 마추어서](https://user-images.githubusercontent.com/39195377/97140495-189bc500-17a0-11eb-9ae9-041534bedccb.PNG)
+
+   **Member**
+
+   ```java
+   @Entity
+   public class Member {
+     @Id
+     @GeneratedValue
+     private Long id;
+     
+     @Column(name = "USERNAME")
+     private String username;
+     
+     private int age;
+     
+     @Column(name = "TEAM_ID")
+     private Long teamId;
+     ...
+   }
+   ```
+
+   **Team**
+
+   ```java
+   @Entity
+   public class Team {
+     @Id
+     @GeneratedValue
+     private Long id;
+     
+     private String name;
+     ...
+   }
+   ```
+
+   위의 코드처럼 객체를 테이블에 맞추어 모델링 했을 때의 문제점은 무엇인가?
+
+   - 저장의 경우를 살펴보자
+
+     ```java
+     // 팀 저장
+     Team team = new Team();
+     team.setName("TeamA");
+     entityManager.persist(team);	// PK값이 세팅된 상태 (영속 상태)
+     // 회원 저장
+     Member member = new Memeber();
+     member.setName("member1");
+     member.setTeamId(team.getId());	// 외래키 식별자를 직접 다룸  
+     entityManager.persist(member);
+     ```
+
+     바로 **외래키의 식별자를 직접 다뤄야 하는(저장해야하는) 문제점이 있다.**
+
+     - Team 객체를 영속화 한 후 Member에 팀을 설정할때, 외래키인 TeamId도 함께 직접 세팅해줘야 한다.
+     - 물론 애플리케이션의 구동은 정상적으로 이루어지지만 객체 지향적인 방법이 아니다.
+
+   - 다음으로 조회의 경우를 살펴보자.
+
+     ```java
+     // 조회
+     Member findMember = entityManager.find(Member.class, member.getId());
+     // 연관 관계가 없음 (못가져옴)
+     Team findTeam = entityManger.find(Team.class, team.getId());
+     ```
+
+     ```java
+     // 먼저 식별자를 가져와야 함 (가져옴)
+     Long findTeamId = findMember = findMember.getTeamId();
+     Team findTeam = entityManger.find(Team.class, team.getId());
+     ```
+
+     - 연관관계가 없기 때문에 식별자를 통해 다시 팀을 조회해야 한다.
+     - 즉, 조회를 두 번 해야 하며, 객체 지향적인 방법이 아니다.
+
+ ★결론적으로, 객체를 테이블에 맞추어 데이터 중심으로 모델링 하면 협력 관계를 만들 수 없다.
+
+- 테이블 : 외래키로 조인을 사용해서 연관된 테이블을 찾는다.
+- 객체 : 참조를 사용해서 연관된 객체를 찾는다.
+
+​     => 테이블과 객체 사이에는 이러한 큰 간격이 존재하게 되는 것이다.
+
+
+
+
+
+2. 객체 지향 모델링(객체의 연관관계 사용)
+
+   ![다대일연관관계](https://user-images.githubusercontent.com/39195377/97140497-189bc500-17a0-11eb-95d4-470dd0b49d95.PNG)
+
+   ```java
+   @Entity
+   public class Member {
+     @Id
+     @GeneratedValue
+     @Column(name = "MEMBER_ID")
+     private Long id;
+     
+     @Column(name = "USERNAME")
+     private String username;
+     
+     private int age;
+     
+   //기존 연관관계 삭제
+   //  @Column(name = "TEAM_ID")
+   //  private Long teamId;
+     
+     @ManyToOne
+     @JoinColumn(name = "TEAM_ID") // 매핑 
+     private Team team;
+     ...
+   }
+   ```
+
+   - 외래 키 대신에 Team 객체를 넣고 TEAM_ID를 매핑한다.
+
+   - 조인할 컬럼을 명시한다
+
+     - JoinColumn으로 조인 컬럼을 명시한다.
+     - 적지 않으면 Default값이 들어가지만, 적어주도록 하자.
+
+   - 연관관계를 표시한다.
+
+     - Member의 입장에서 Team은 다대일(N:1) 이다 : 여러명의 멤버가 하나의 팀에 가입할 수 있다.
+     - 반대로 Team의 입장에서는 일대다(1:N) 이다. 
+     - @ManyToOne 으로 연관관계를 설정하고, Team이라는 필드가 DB의 "TEAM_ID" 라는 외래 키와 매핑된다.
+
+     ![ORM연관관계](https://user-images.githubusercontent.com/39195377/97140494-176a9800-17a0-11eb-973f-cddab167f8fc.PNG)
+
+
+
+
+​		객체 지향 모델링 기준으로 저장과 조회를 살펴보자.	
+
+```java
+// 팀 저장
+Team team = new Team();
+team.setName("TeamA");
+entityManager.persist(team);
+// 회원 저장
+Member member = new Memeber();
+member.setName("member1");
+member.setTeam(team);    // 단방향 연관관계 설정, 참조 저장
+entityManager.persist(member);
+
+Member findMember = entityManager.find(Member.class,  member.getId());
+```
+
+저장의 경우, 테이블에 맞추어 연관관계를 매핑하던 것과 다르게 setTeam에 참조를 저장한다.
+
+
+
+조회의 경우도, 조회쿼리를 한번만 쓰면 된다.
+
+```java
+// 조회
+Member findMember = em.find(Member.class, member.getId());
+// 참조를 사용해서 연관관계 조회
+Team findTeam = findMember.getTeam();
+```
+
+
+
+
   </div>
 </details>
 
