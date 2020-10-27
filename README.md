@@ -1801,6 +1801,13 @@ findMember = class hello.jpa.Member$HibernateProxy$yJgMgbkR
 </details>
 
 
+<details>
+  <summary>7. 지연로딩과 </summary>
+  <div markdown="1">
+    내용
+  </div>
+</details>
+
 
 
 
