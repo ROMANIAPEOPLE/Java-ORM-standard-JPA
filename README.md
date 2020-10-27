@@ -1161,6 +1161,243 @@ tx.commit();
 </details>
 
 
+<details>
+  <summary>5. 프록시란?</summary>
+  <div markdown="1">
+    # 프록시
+
+'프록시' 자체를 실무에서 직접 사용할 일은 매우 드물지만, JPA에서 가장 중요한 핵심중 하나인 '지연로딩'과 '즉시로딩' 을 이해하기 위해서는 '프록시'의 개념을 확실히 짚고 넘어가야 한다.
+
+예를들어 Member라는 엔티티와 Team이라는 엔티티가 @ManyToOne으로 관계를 맺고있다고 가정해보자. 그렇다면 Member 엔티티를 조회할때 반드시 Team 엔티티도 조회해야 할까?
+
+- 실제로 필요한 비즈니스 로직에 따라 다르다.
+- 비즈니스 로직에서 필요하지 않을 때가 있는데 항상 Team을 함께 가져올 필요는 없다.
+- JPA는 이러한 낭비를 지양하기 위해 지연로딩과 '프록시' 를 지원한다.
+
+
+
+### 프록시란?
+
+- JPA에서 entityManger.find()와 비슷한 entityManager.getReference() 라는 메서드도 제공한다.
+- entityManager.find()는 DB에서 실제로 엔티티 객체를 조회하는 메서드고
+- entityManager.getReference()는 DB의 조회를 미루는 가짜 엔티티(프록시) 객체를 조회하는 메서드이다.
+
+```java
+//Member 엔티티
+@Entity
+@Getter
+@Setter
+public class Member extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "name")
+    private String username;
+
+    private Integer age;
+
+    @Enumerated(EnumType.STRING)
+    private RoleType roleType;
+
+    @Lob
+    private String description;
+
+    @ManyToOne
+    @JoinColumn(name = "team_id")
+    private Team team;
+
+    @OneToOne
+    @JoinColumn(name = "locker_id")
+    private Locker locker;
+
+    @OneToMany(mappedBy = "member")
+    private List<MemberProduct> memberProducts = new ArrayList<>();
+}
+
+
+```
+
+- entityManager.find()로 멤버를 조회하면, 아래와 같이 DB에 쿼리가 바로 실행된다.
+
+```sql
+Hibernate: 
+    /* insert hello.jpa.Member
+        */ insert 
+        into
+            Member
+            (id, createdBy, createdDate, lastModifiedBy, lastModifiedDate, age, description, locker_id, roleType, name) 
+        values
+            (null, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    select
+        member0_.id as id1_4_0_,
+        member0_.createdBy as createdB2_4_0_,
+        member0_.createdDate as createdD3_4_0_,
+        member0_.lastModifiedBy as lastModi4_4_0_,
+        member0_.lastModifiedDate as lastModi5_4_0_,
+        member0_.age as age6_4_0_,
+        member0_.description as descript7_4_0_,
+        member0_.locker_id as locker_10_4_0_,
+        member0_.roleType as roleType8_4_0_,
+        member0_.team_id as team_id11_4_0_,
+        member0_.name as name9_4_0_,
+        locker1_.id as id1_3_1_,
+        locker1_.name as name2_3_1_,
+        team2_.id as id1_8_2_,
+        team2_.createdBy as createdB2_8_2_,
+        team2_.createdDate as createdD3_8_2_,
+        team2_.lastModifiedBy as lastModi4_8_2_,
+        team2_.lastModifiedDate as lastModi5_8_2_,
+        team2_.name as name6_8_2_ 
+    from
+        Member member0_ 
+    left outer join
+        Locker locker1_ 
+            on member0_.locker_id=locker1_.id 
+    left outer join
+        Team team2_ 
+            on member0_.team_id=team2_.id 
+    where
+        member0_.id=?
+findMember.id = 1
+findMember.username = creator
+
+```
+
+- 다음은 entityManager.getReference()로 멤버를 조회했을때 DB 쿼리가 실행되는것을 살펴보자.
+
+  ```java
+  Member member = new Member();
+  member.setCreatedBy("creator");
+  
+  em.persist(member);
+  
+  em.flush();
+  em.clear();
+  
+  Member findMember = em.find(Member.class, member.getId());
+  System.out.println("findMember.id = " + findMember.getId());
+  System.out.println("findMember.username = " + findMember.getUsername());
+  
+  tx.commit();
+  ```
+
+  
+
+  ```sql
+  Hibernate: 
+      /* insert hello.jpa.Member
+          */ insert 
+          into
+              Member
+              (id, createdBy, createdDate, lastModifiedBy, lastModifiedDate, age, description, locker_id, roleType, name) 
+          values
+              (null, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  findMember = class hello.jpa.Member$HibernateProxy$yJgMgbkR
+  findMember.id = 1
+  Hibernate: 
+      select
+          member0_.id as id1_4_0_,
+          member0_.createdBy as createdB2_4_0_,
+          member0_.createdDate as createdD3_4_0_,
+          member0_.lastModifiedBy as lastModi4_4_0_,
+          member0_.lastModifiedDate as lastModi5_4_0_,
+          member0_.age as age6_4_0_,
+          member0_.description as descript7_4_0_,
+          member0_.locker_id as locker_10_4_0_,
+          member0_.roleType as roleType8_4_0_,
+          member0_.team_id as team_id11_4_0_,
+          member0_.name as name9_4_0_,
+          locker1_.id as id1_3_1_,
+          locker1_.name as name2_3_1_,
+          team2_.id as id1_8_2_,
+          team2_.createdBy as createdB2_8_2_,
+          team2_.createdDate as createdD3_8_2_,
+          team2_.lastModifiedBy as lastModi4_8_2_,
+          team2_.lastModifiedDate as lastModi5_8_2_,
+          team2_.name as name6_8_2_ 
+      from
+          Member member0_ 
+      left outer join
+          Locker locker1_ 
+              on member0_.locker_id=locker1_.id 
+      left outer join
+          Team team2_ 
+              on member0_.team_id=team2_.id 
+      where
+          member0_.id=?
+  findMember.username = creator
+  ```
+
+```sql
+findMember = class hello.jpa.Member$HibernateProxy$yJgMgbkR
+```
+
+이부분을 자세히 보면, HibernateProxy라는 객체를 확인할 수 있다.
+
+- 프록시는 em.find() 를 실행했을때 가짜객체인 프록시를 초기화 한다.
+- 실제로 findMember.getId()와 같이 데이터 조회가 필요할때 비로소 실제 쿼리를 실행한다.
+
+![프록시특징1](https://user-images.githubusercontent.com/39195377/97323863-8f29e700-18b4-11eb-9100-4efda21b26c3.PNG)
+
+- 프록시는 실제 클래스를 상속 받아서 만들어진다. 즉 실제 객체의 참조를 보관한다.
+- 실제 클래스와 겉 모양이 동일하다.
+
+![위임](https://user-images.githubusercontent.com/39195377/97323856-8df8ba00-18b4-11eb-92d2-cf7234b2dddd.PNG)
+
+- 사용하는 입장에서는 진짜 객체인지 가짜 객체(프록시) 인지 구분하지 않고 사용하면 된다.
+- 프록시 객체를 호출하면 프록시 객체는 실제 객체의 메소드를 호출한다.
+
+
+
+![프록시객체초기화](https://user-images.githubusercontent.com/39195377/97323861-8f29e700-18b4-11eb-9fbe-cc14487dfaaf.PNG)
+
+
+#### 프록시 객체의 초기화 과정
+
+1. 클라이언트가 getName()을 요청한다.
+2. 프록시에서 member target에  값(getName) 이 있는지 확인한다.
+3. 값이 없으면 프록시가 영속성 컨텍스트에 요청한다.
+4. 영속성 컨텍스트는 DB에서 그 값을 조회한다.
+5. 실제 Entity를 생성해서 프록시 member target으로 Entity의 정보를 넘긴다.
+
+
+
+### 프록시의 특징 정리
+
+- 프록시는 실제 엔티티로 바뀌는 것이 아니다. 단지 초기화 되면 프록시 객체를 통해서 실제 엔티티에 접근이 가능한 것 뿐.(정확히 말하면 target에 값이 채워지는 것)
+
+- 프록시는 처음 사용할 때 한 번만 초기화 된다.
+
+- 이미 영속성 컨텍스트에 존재하는 값을 조회했다면 프록시로 조회(getReference)해도 원본이 출력된다.
+
+  - 간단하게 생각해보면, 이미 영속성 컨텍스트에 올려져 있는 객체는 DB쿼리문을 실행하지 않아도 되기때문에 굳이 다시 프록시르 감싸서 반환할 필요가 없다.
+  - JPA는 하나의 영속성 컨텍스트에서 조회하는 같은 엔티티의 동일성을 보장한다.
+
+  ```java
+  Member find = em.find(Member.class, member.getId());
+  Member reference = em.getReference(Member.class, member.getId());
+  
+  System.out.println("find == reference : " + (find == reference)); // true
+  ```
+
+  
+
+
+
+정리
+
+★프록시는 단순히 DB조회를 필요한 시점까지 미루는 개념으로, 실제로 조회가 필요할 때 쿼리문이 나간다.
+
+★ **이렇게 복잡한 작업을 JPA가 내부적으로 다 처리해주지만, 우리가 실무에서 직접 개발을 할 때는 이 객체가 프록시인지, 진짜 객체인지 신경쓸 필요가 없다. 그냥 개발하자.**
+
+
+  </div>
+</details>
+
+
 
 
 
