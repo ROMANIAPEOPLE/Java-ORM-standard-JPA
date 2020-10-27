@@ -230,7 +230,8 @@ List<Member> members = query.getResultList();
 <details>
   <summary>2. 객체와 DB의 기본적인 매핑 방법</summary>
   <div markdown="1">
-    # 객체와 DB의 기본적인 매핑 방법
+    
+   # 객체와 DB의 기본적인 매핑 방법
 
 ### 엔티티 매핑
 
@@ -818,6 +819,7 @@ entityManager.persist(member);
 <details>
   <summary>4. 연관관계 매핑의 4가지 종류</summary>
   <div markdown="1">
+   
    # 연관관계 매핑의 4가지 종류
 
  들어가기 전에 
@@ -1160,11 +1162,22 @@ tx.commit();
   </div>
 </details>
 
+<details>
+  <summary>5. 고급 매핑(상속매핑/MappedSuperClass</summary>
+  <div markdown="1">
+    내용
+  </div>
+</details>
+
+
+
+
 
 <details>
-  <summary>5. 프록시란?</summary>
+  <summary>6. 프록시란?</summary>
   <div markdown="1">
-    # 프록시
+    
+  # 프록시
 
 '프록시' 자체를 실무에서 직접 사용할 일은 매우 드물지만, JPA에서 가장 중요한 핵심중 하나인 '지연로딩'과 '즉시로딩' 을 이해하기 위해서는 '프록시'의 개념을 확실히 짚고 넘어가야 한다.
 
