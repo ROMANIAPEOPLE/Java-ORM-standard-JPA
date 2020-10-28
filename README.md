@@ -2462,7 +2462,8 @@ findMember = class hello.jpa.Member$HibernateProxy$yJgMgbkR
 <details>
   <summary>8-2. 값 타입: 컬렉션</summary>
   <div markdown="1">
-    # 값 타입 컬렉션(collection)
+   
+   # 값 타입 컬렉션(collection)
 
 - 값 타입을 컬렉션에 담아서 쓰는 것을 말한다.
 
