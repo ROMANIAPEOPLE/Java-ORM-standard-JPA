@@ -2182,7 +2182,8 @@ findMember = class hello.jpa.Member$HibernateProxy$yJgMgbkR
 <details>
   <summary>8. 값 타입 : 기본 값 타입과 임베디드 타입</summary>
   <div markdown="1">
-   # JPA의 데이터 타입 분류
+  
+  # JPA의 데이터 타입 분류
 
 ### 1. 엔티티 타입
 
@@ -2451,9 +2452,190 @@ findMember = class hello.jpa.Member$HibernateProxy$yJgMgbkR
       
     tx.commit();
   ```
+  
+  
+  
   </div>
 </details>
 
+
+<details>
+  <summary>8-2. 값 타입: 컬렉션</summary>
+  <div markdown="1">
+    # 값 타입 컬렉션(collection)
+
+- 값 타입을 컬렉션에 담아서 쓰는 것을 말한다.
+
+  - 연관관계 매핑에서 mappedBy에 사용되는 엔티티 컬렉션이 아니라, 값 타입을 컬렉션에 쓰는 것이다.
+  - 값 타입 컬렉션은 값 타입을 하나 이상 저장할 때 사용할 수 있다.
+
+  ```java
+  public class Member {
+      @Id
+      private Long id;
+      
+      private Set<String> favoriteFoods;
+      private List<Address> addressHistory;
+  }
+  ```
+
+- RDB(관계형데이터베이스) 에서는 내부적으로 컬렉션을 담을 수 있는 구조가 없다. 그냥 값만 넣을 수 있는 구조이다.
+
+- 이런 관계를 DB 테이블에 저장하려면 별도의 테이블이 필요하다.
+
+  ```java
+  @Entity
+  public class Member {
+      ...
+      @ElementCollection
+      @CollectionTable(
+          name = "FAVORITE_FOOD",
+          joinColumns = @JoinColumn(name = "MEMBER_ID"))
+      @Column(name = "FOOD_NAME") // 컬럼명 지정 (예외)
+      private Set<String> favoriteFoods = new HashSet<>();
+  
+      @ElementCollection
+      @CollectionTable(
+          name = "ADDRESS",
+          joinColumns = @JoinColumn(name = "MEMBER_ID"))
+      private List<Address> addressHistory = new ArrayList<>();
+      ...
+  }
+  ```
+
+  - 기본 사용 어노테이션
+
+    - @ElementCollection, @CollectionTable 을 사용한다.
+
+  - 과정
+
+    - Member 클래스에 값 타입 컬렉션을  추가한다.
+    - addressHistory는 임베디드 타입이므로 컬럼명들을 그대로 사용하면 된다.
+    - favoriteFoods는 String 하나(내가 만든 것이 아님)에 대한 Set이기 때문에 컬럼명을 지정해준다.
+    - memberId를 외래키로 지정한다. 어떤 memberId에 소속되는지 알아야하기 때문에 연관 관계가 필요하다.
+
+    ```java
+    Member member = new Member();
+    member.setUsername("member1");
+    member.setHomeAddress(new Address("homeCity", "street", "10000"));
+    
+    member.getFavoriteFoods().add("치킨");
+    member.getFavoriteFoods().add("족발");
+    member.getFavoriteFoods().add("피자");
+    
+    member.getAddressHistory().add(new Address("old1", "street1", "10001"));
+    member.getAddressHistory().add(new Address("old2", "street2", "10002"));
+    
+    em.persist(member);
+    
+    tx.commit();
+    ```
+
+    - 위 코드가 실행되면 다음과 같은 일이 일어난다
+      1. 먼저 Member가 저장되고 , Member 저장 쿼리가 실행된다.
+      2. 그 다음에 값 타입 컬렉션을 지정하는 별도의 테이블에 대한 INSERT 쿼리가 6개 나간다.
+      3. 값 타입 컬렉션에 대한 persist를 하지 않았는데도 INSERT 쿼리가 나갔다.
+      4. 즉 Member 객체의 라이프 사이클과 동일하게 적용된다는 것이다.
+    - Member에 소속된 값 타입들의 라이프 사이클은 Member에 의존한다.
+    - 값 타입은 별도로 persist 또는 update를 할 필요가 없이 Member에서 값을 변경만 하면 자동으로 처리해준다.
+    - 값 타입 컬렉션은 영속성 전이(Cascade)와 고아 객체 제거 기능을 필수로 가진다고 볼 수있다.
+    - 또한 컬렉션 값 타입들은 자동으로 지연 로딩(FetchType LAZY)를 가진다.
+
+
+
+	#### 마찬가지로, 컬렉션 값 타입도 불변 객체이어야 한다.
+
+- 값 타입 수정에 대한 기본 개념
+
+  ```java
+  System.out.println("============ START ============");
+    Member findMember = em.find(Member.class, member.getId());
+  
+    // homeCity -> newCity 
+    // findMember.getHomeAddress().setCity("newCity"); // 틀린 방법 
+  
+    Address address = findMember.getHomeAddress();
+    findMember.setHomeAddress(new Address("newCity", address.getStreet(), address.getZipCode())); // 새로 생성 
+  
+    tx.commit();
+  ```
+
+  - 값 타입은 불변이어야 하기 때문에 앞서 학습한 내용을 토대로, 새로운 객체를 만들어서 통째로 바꿔줘야 한다.
+
+- 그렇다면 객체가 아닌 String은 ?
+
+  ```java
+  System.out.println("============ START ============");
+   Member findMember = em.find(Member.class, member.getId());
+   // 치킨 -> 한식 
+   findMember.getFavoriteFoods().remove("치킨");
+   findMember.getFavoriteFoods().add("한식");
+  ```
+
+  - String 타입은 자바에서 제공하는 불변 객체이다. 따라서 이렇다할 방법이 없이 고전적인 방법을 사용해야 한다.
+  - **단순하게, 원하는 값을 삭제하고 다시 넣어줘야 한다.**
+
+
+
+### 값 타입 컬렉션의 문제점
+
+- 값 타입 컬렉션은 엔티티와 다르게 식별자의 개념이 없다.
+- 또한 값이 변경되면 추적이 어렵다.
+- 값 타입 컬렉션에 변경 사항이 발생하면, 주인 엔티티와 연관된 모든 데이터를 삭제하고 값 타입 컬렉션에 있는 현재 값을 모두 다시 저장한다.
+- 또한, 의도한 대로 동작하지 않을 때가 많다.
+
+
+
+#### 결론
+
+- 값 타입 컬렉션은 웬만하면 사용하지 말자.
+
+- 정말 단순한 로직(추적할 필요도 없고, 값이 바뀌어도 상관 없을때)만 사용하자.
+
+- 실무에서는 상황에 따라 값 타입 컬렉션 대신에 일대다 관계를 고려하는 것이 낫다.
+
+- 일대다 관계를 위한 엔티티를 만들고, 여기에서 값 타입을 사용하자.속성 전이(Cascade) + 고아 객체 제거를 사용해서 값 타입 컬렉션처럼 사용하자.
+
+- @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true) 실무에서 쿼리 최적화에도 유리하다.
+
+  ```java
+  @Entity
+  public class Member {
+      ...
+      @ElementCollection
+      @CollectionTable(
+          name = "FAVORITE_FOOD",
+          joinColumns = @JoinColumn(name = "MEMBER_ID"))
+      @Column(name = "FOOD_NAME")
+      private Set<String> favoriteFoods = new HashSet<>();
+  
+      // 변경 
+      @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+      @JoinColumn(name = "MEMBER_ID")
+      private List<AddressEntity> addressHistory = new ArrayList<>();
+      ...
+  }
+  ```
+
+
+
+### 값 타입 정리
+
+- 엔티티 타입
+  - 식별자가 있다.
+  - 생명 주기를 관리한다.
+  - 공유가 가능하다.
+- 값 타입
+  - 식별자가 없다.
+  - 생명 주기를 엔티티에 의존한다.
+  - 공유하면 굉장히 큰 위험이 따른다.
+  - 불변 객체로 만들어야한다.
+  - 식별자가 필요하고, 지속해서 값을 추적하고 변경해야 한다면, 그것은 값 타입이 아닌 엔티티이다.
+  - 값 타입의 예로, [쇼핑몰에서의 구매자 주소 History] 가 있는데, 이것을 다른 Member들과 공유하지 않는다. 따라서 값 타입으로 사용할 수 있다.
+
+
+  </div>
+</details>
 
 
 
