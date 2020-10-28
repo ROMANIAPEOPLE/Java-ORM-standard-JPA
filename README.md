@@ -2175,11 +2175,285 @@ findMember = class hello.jpa.Member$HibernateProxy$yJgMgbkR
      - **위와 같은 내용은 매우 이론적인 이야기다. 그냥 LAZY로 사용하자**
      - 즉시 로딩은 상상하지 못한 쿼리가 나간다.
 
-  
-
-  
   </div>
 </details>
+
+
+<details>
+  <summary>8. 값 타입 : 기본 값 타입과 임베디드 타입</summary>
+  <div markdown="1">
+   # JPA의 데이터 타입 분류
+
+### 1. 엔티티 타입
+
+- @Entity로 정의하는 객체
+- 데이터가 변해도 식별자로 지속해서 추적 가능
+- 예)회원 엔티티의 키나 나이 값을 변경해도 식별자로 인식 가능
+
+### 2. 값 타입
+
+- int, Integer, String 처럼 단순히 값으로 사용하는 자바 기본 타입이나 객체
+- 식별자가 없고 값만 있으므로 변경시 추적 불가
+- 예)숫자 100을 200으로 변경하면 완전히 다른 값으로 대체
+
+
+
+### 구체적인 데이터 타입 분류 3가지
+
+1. 기본 값 타입
+   - 자바 기본 타입(int, double)
+   - 래퍼 클래스(Integer, Long)
+   - String
+2. 임베디드 타입(embedded type, 복합 값 타입)
+   - JPA에서 정의해서 사용해야 한다.
+3. 컬렉션 값 타입(collection value type)
+   - 마찬가지로 JPA에서 정의해서 사용해야 한다.
+   - 컬렉션에 기본값 또는 임베디드 타입을 넣은 형태이다.
+
+
+
+
+
+## 1. 기본 값 타입
+
+- 자바 기본 타입(int, double 등등)
+- 래퍼 클래스 (Integer, Long)
+- String(불변 객체)
+
+
+
+ #### 특징
+
+- 기본 값 타입은 생명 주기를 엔티티에 의존하게 된다.
+
+  - 예를들어, Member라는 엔티티에서 age라는 필드가 있는데, Member 엔티티가 삭제되면 age 필드도 함께 삭제된다.
+
+- 값 타입은 절대 공유하면 안된다.
+
+  - Side Effect가 발생할 수 있다.
+
+    -> 회원 이름 변경시 다른 회원의 이름도 함께 변경되는 경우가 발생할 수 있음
+
+- ```java
+   int a = 20;
+    int b = a; // 20이라는 값을 복사
+    b = 10; 
+  ```
+
+  - 기본 타입은 항상 값을 복사한다.
+  - 즉, side effect가 발생하지 않는다.
+
+- ```java
+    Integer a = new Integer(10);
+    Integer b = a; // a의 참조를 복사 
+    a.setValue(20); // Side Effect!!  (a,b둘다 변경됨)
+  ```
+
+  - Integer,Long과같은 래퍼 클래스와 String 객체는 공유 가능한 객체지만, 변경하면 안된다.
+  - 그래서 Java에서는 변경 자체를 불가능하게 하여 Side Effect를 방지한다.
+
+
+
+## 2. 임베디드 타입(embedded type, 복합 값 타입)
+
+- 새로운 값 타입을 직접 정의할 수 있다.
+- JPA는 임베디드 타입(embedded type, 내장타입) 이라고 한다.
+- 주로 기본 값 타입을 모아서 만들기 때문에 '복합 값 타입' 이라고도 한다.
+- int,String과 같은 값 타입 이다.
+
+
+
+​	**예시**
+
+- 회원 엔티티는 아래와 같이 이름, 근무 시작일, 근무 종료일, 주소(도시,번지,우편번호)를 가진다
+- ![값타입1](https://user-images.githubusercontent.com/39195377/97449738-59006c00-1975-11eb-94ca-7f20ce7a67fd.PNG)
+- 회원 엔티티는 이름, 근무기간, 집주소를 가진다
+  - 실 생활에서는 이와 같이 추상화해서 쉽게 표현한다.
+  - 즉, 위와 같이 [근무기간] [주소] 처럼 묶을 수 있는 것이 임베디드 타입이다.
+
+
+
+#### 임베디드 타입의 사용법
+
+- 기본 생성자는 필수이다.
+
+- @Embeddable
+
+  - 값 타입을 정의하는 곳에 표시한다.
+
+- @Embedded
+
+  - 값 타입을 사용하는 곳에 표시한다.
+  - @Embeddable을 값 타입을 정의하는 곳에 표시했으면 생략 가능하지만, 가독성을 위해 둘 다 적어주는 습관을 들이자.
+
+  ```java
+  @Embeddable
+  @NoArgsConstructor
+  public class Address {
+    private String city;
+    private String street;
+    private String zipcode;
+    ...
+  }
+  @Embeddable
+  @NoArgsConstructor
+  public class Period {
+    private LocalDateTime startDate;
+    private LocalDateTime endDate;
+    ...
+  }
+  ```
+
+  ```java
+  @Entity
+  public class Member {
+    ...
+    @Embedded
+    private Address homeAddress;
+    @Embedded
+    private Address workAddress;
+    ...
+  }
+  ```
+
+  - 위 코드처럼 사용할 수 있다.
+
+-  임베디드 타입과 값 타입에 상관 없이 DB회원 테이블의 형태는 동일하다.
+
+- 하지만 객체의 경우에는 데이터 뿐만 아니라 그에 맞는 메서드를 가지고 있기 때문에 공통으로 묶은 임베디드 타입으로 구성하면 이점이 있다.
+
+- 임베디드 타입을 포함한 모든 값 타입은 값 타입을 소유한 엔티티에 생명주기를 의존함
+
+  ![값2](https://user-images.githubusercontent.com/39195377/97449730-57cf3f00-1975-11eb-9076-80fe6f41e157.PNG)
+
+  
+
+**임베디드 타입 사용의 장점**
+
+1. 임베디드 타입을 사용하기 전과 후에 매핑하는 테이블은 같다.
+   - 임베디드 타입은 엔티티의 값일 뿐, DB테이블과는 관련이 없다.
+2. 객체와 테이블을 아주 세밀하게 매핑하는 것이 가능하다.
+3. 용어/코드를 공통적으로 관리할 수 있게 해준다.
+4. **잘 설계한 ORM 애플리케이션은 매핑한 테이블의 수보다 클래스의 수가 더 많아야 한다.**
+
+
+
+
+
+### 값 타입과 불변 객체
+
+- 값 타입은 복잡한 객체 세상을 조금이라도 단순화 하려고 만든 개념이다.
+- 따라서 값 타입은 단순하고 안전하게 다룰 수 있어야 한다.
+
+- 임베디드 타입 같은 값 타입을 여러 엔티티에서 공유하면 굉장히 위험하다.(Side Effect) 발생
+
+  ![값탑3](https://user-images.githubusercontent.com/39195377/97449739-59990280-1975-11eb-8798-899c80dfbfaf.PNG)
+
+- 왜 위험한가? 코드로 살펴보자.
+
+  ```java 
+  Address address = new Address("city", "street", "10000");
+    // 
+    Member member = new Member();
+    member.setUsername("member1");
+    member.setHomeAddress(address);
+    em.persist(member);
+    // 
+    Member member2 = new Member();
+    member2.setUsername("member2");
+    member2.setHomeAddress(address);
+    em.persist(member2);
+    // 첫 번째 member의 Address(city) 속성만 변경하고 싶다.
+    member.getHomeAddress().setCity("new city");
+    tx.commit(); // UPDATE Query 2번 
+  ```
+
+- Member class가 같은 Address 객체를 가지고 있고, 두 Member 객체 중 첫 번째 Member의 Address(city) 속성만 변경하려고 하는 경우, 같은 Address 객체를 사용하고 있기 때문에 
+
+- member1과 member2가 모두 new city로 변경된다.
+
+- 즉, member1만 변경하려고 해도, member2까지 변경되면서 update 쿼리가 두번 실행된다.
+
+- Side Effect와 같은 버그는 굉장히 캐치하기가 어렵다.
+
+- 이 문제를 해결하기 위해서는 **값 타입 복사**를 이용하자.
+
+  ![값탑4](https://user-images.githubusercontent.com/39195377/97449743-5a319900-1975-11eb-97d9-95e0ec8f6a76.PNG)
+
+- 아래 코드처럼 완전히 새로운 엔티티를 만들어서(복사해서) 값을 변경하자.
+
+  ```java
+    Address address = new Address("city", "street", "10000");
+    // 
+    Member member = new Member();
+    member.setUsername("member1");
+    member.setHomeAddress(address);
+    em.persist(member);
+    // Address 객체 복사
+    Address copyAddress = new Address(address.getCity(), address.getStreet(), address.getZipcode());
+    // 
+    Member member2 = new Member();
+    member2.setUsername("member2");
+    member2.setHomeAddress(copyAddress); // 복사한 것을 넣는다.
+    em.persist(member2);
+    // 첫 번째 member의 Address(city) 속성만 변경된다.!
+    member.getHomeAddress().setCity("new city");
+  ```
+
+
+
+### 객체 타입의 한계
+
+- 위의 예시처럼 항상 값을 복사해서 사용하면 공유 참조로 인해 발생되는 Side Effect를 피할 수 있다.
+
+- 그러나, 임베디드 타입처럼 직접 정의한 값 타입은 자바의 기본타입(primitive)이 아니라 객체 타입이다.
+
+  - 자바의 기본타입(primitive)은 대입하면 값을 복사한다.
+
+    ```java
+     int a = 10;
+      int b = a; // 기본 타입은 값을 복사
+      b = 4; 
+    ```
+
+  - 객체 타입은 참조값을 직접 대입하는 것을 막을 수 있는 방법이 없다.
+
+    ```java
+     Address a = new Address("old");
+      Address b = a; // 객체 타입은 참조를 전달 (같은 인스턴스를 가리킴)
+      b.setCity("new"); // a, b 모두 city가 변경된다.
+    ```
+
+  - 즉, 프로젝트 진행 중 누군가의 실수로 복사하지 않은 Address 객체를 그대로 넣어서 수정을 진행했다면, 컴파일 단계에서 찾을 수 있는 방법이 없다.
+
+  - 이러한 문제점을 해결하기 위해 임베디드 타입(객체 타입)은 **불변 객체(Immutable Object)로 만들어야 한다.**
+
+  - **불변 객체**란 ? 
+
+    - 생성 시점 이후 절대로 값을 변경할 수 없는 객체
+    - **<u>생성자로만 값을 설정하고 Setter를 만들지 않으면 된다.</u>**
+    - Integer와 String은 자바가 제공하는 대표적인 불변 객체이다.
+
+  - 그렇다면 **불변 객체**로 설계된 객체의 필드를 바꾸고 싶다면 어떻게 해야할까?
+
+  - 앞서 학습한 내용과 마찬가지로, 새로운 객체를 만들면(복사) 된다.
+
+  ```java
+  Address address = new Address("city", "street", "10000");
+      
+    Member member = new Member();
+    member.setUsername("member1");
+    member.setHomeAddress(address);
+    em.persist(member);
+      
+    Address newAddress = new Address("NewCity", address.getStreet(), address.getZipcode());
+    member.setHomeAddress(newAddress); // 통으로 변경 
+      
+    tx.commit();
+  ```
+  </div>
+</details>
+
 
 
 
