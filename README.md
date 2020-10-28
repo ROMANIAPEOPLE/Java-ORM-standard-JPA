@@ -1804,7 +1804,380 @@ findMember = class hello.jpa.Member$HibernateProxy$yJgMgbkR
 <details>
   <summary>7. 지연로딩과 즉시로딩 </summary>
   <div markdown="1">
-    내용
+
+# 즉시로딩과 지연로딩
+
+- 프록시에서 공부했던 내용을 생각해보자.
+- Member를 조회할때, 연관관계를 맺고있는 Team까지 꼭 함께 조회해야 할까?
+- 단순히 Member만 필요한데 Team도 함께 조회하면 분명한 낭비이다.
+- 이러한 낭비를 해결하기 위해  JPA는 '지연로딩'을 지원한다.
+
+
+
+
+
+#### 지연로딩을 사용해서 Member 조회하기
+
+- Member와 Team은 @ManyToOne (다대일) 관계로 매핑이 되어있음
+
+- FetchType.LAZY가 바로 지연로딩 설정이다.
+
+  ```java
+  @Entity
+  public class Member  {
+  
+      @Id
+      @GeneratedValue(strategy = GenerationType.IDENTITY)
+      private Long id;
+  
+      @Column(name = "name")
+      private String username;
+  
+      private Integer age;
+  
+      @Enumerated(EnumType.STRING)
+      private RoleType roleType;
+  
+      @Lob
+      private String description;
+  
+      @ManyToOne(fetch = FetchType.LAZY)
+      @JoinColumn(name = "team_id", insertable = false, updatable = false)
+      private Team team;
+  
+      @OneToOne
+      @JoinColumn(name = "locker_id")
+      private Locker locker;
+  
+      @OneToMany(mappedBy = "member")
+      private List<MemberProduct> memberProducts = new ArrayList<>();
+  
+      public void changeTeam(Team team) {
+          this.team = team;
+          this.team.getMembers().add(this);
+      }
+  }
+  ```
+
+- 메인 함수에서 팀과 멤버를 저장하고 조회해보자.
+
+  ```java
+  Team team = new Team();
+  team.setName("teamA");
+  em.persist(team);
+  
+  Member member = new Member();
+  member.setUsername("memberA");
+  em.persist(member);
+  
+  member.changeTeam(team);
+  
+  em.flush();
+  em.clear();
+  
+  Member findMember = em.find(Member.class, member.getId());
+  
+  System.out.println(findMember.getTeam().getClass());
+  ```
+
+  - Member를 조회하고, Team 객체의 클래스를 확인해보면 프록시 객체가 조회된다.
+  - 쿼리문도 Member 조회 쿼리만 실행된다.
+
+- 다음으로, 팀의 이름을 출력해보자
+
+  - 이제 Team을 실제로 사용하는 시점이 되었기 때문에 조회 쿼리가 이제서야 나간다.
+
+  ```java
+  Team team = new Team();
+  team.setName("teamA");
+  em.persist(team);
+  
+  Member member = new Member();
+  member.setUsername("memberA");
+  em.persist(member);
+  
+  member.changeTeam(team);
+  
+  em.flush();
+  em.clear();
+  
+  Member findMember = em.find(Member.class, member.getId());
+  
+  System.out.println(findMember.getTeam().getClass());
+  System.out.println("TEAM NAME : " + findMember.getTeam().getName());
+  ```
+
+  - 실행된 쿼리
+
+    ```sql
+    Hibernate: 
+        select
+            member0_.id as id1_4_0_,
+            member0_.createdBy as createdB2_4_0_,
+            member0_.createdDate as createdD3_4_0_,
+            member0_.lastModifiedBy as lastModi4_4_0_,
+            member0_.lastModifiedDate as lastModi5_4_0_,
+            member0_.age as age6_4_0_,
+            member0_.description as descript7_4_0_,
+            member0_.locker_id as locker_10_4_0_,
+            member0_.roleType as roleType8_4_0_,
+            member0_.team_id as team_id11_4_0_,
+            member0_.name as name9_4_0_,
+            locker1_.id as id1_3_1_,
+            locker1_.name as name2_3_1_ 
+        from
+            Member member0_ 
+        left outer join
+            Locker locker1_ 
+                on member0_.locker_id=locker1_.id 
+        where
+            member0_.id=?
+            
+    class hello.jpa.Team$HibernateProxy$z4JtUeLD  // 프록시 객체
+    ​
+    Hibernate: 
+        select
+            team0_.id as id1_8_0_,
+            team0_.createdBy as createdB2_8_0_,
+            team0_.createdDate as createdD3_8_0_,
+            team0_.lastModifiedBy as lastModi4_8_0_,
+            team0_.lastModifiedDate as lastModi5_8_0_,
+            team0_.name as name6_8_0_ 
+        from
+            Team team0_ 
+        where
+            team0_.id=?
+            
+    TEAM NAME : teamA
+    ```
+
+  - 방금 코드로 공부한 내용을 정리하자면 아래 그림과 같다.
+
+![지연로딩 정리](https://user-images.githubusercontent.com/39195377/97402257-9ba25400-1935-11eb-8092-beb19f3ddf3d.PNG)
+
+  
+
+  ##### 지연로딩의 내부 매커니즘
+
+  - 로딩되는 시점에 Lazy 로딩 설정이 되어있는 Team 엔티티는 프록시 객체로 가져온다.
+  - 이후 실제로 Team 객체를 사용하는 시점에 초기화되면서 DB 쿼리가 실행된다.
+    - getTeam().getName()으로 조회시 쿼리가 나간다.
+    - getName을 조회하기 전에 getTeam으로 Team을 조회하면 프록시 객체가 조회된다.
+
+  ![지연로딩](https://user-images.githubusercontent.com/39195377/97402262-9cd38100-1935-11eb-931d-0fa6b29c5c55.PNG)
+
+  
+
+  
+
+  
+
+  ### 즉시 로딩을 사용해서 Member 조회하기
+
+  - 대부분의 비즈니스 로직에서 Member와 Team을 함께 사용해야 할 때 즉시로딩을 사용하자.
+
+  - fetch 타입을 EAGER로 설정하면 된다.  ex) @ManyToOne(fetch = FetchType.EAGER)
+
+  - 이렇게 하면 실제로 조회할 때 한방 쿼리로 전부 조회해온다. (실제 Team을 사용할 때 쿼리가 안나가도 된다.)
+
+  - 실행 결과를 보자. Team도 프록시 객체가 아닌 실제 객체이다.
+
+    
+
+  ```java
+  public class Member extends BaseEntity {
+      ...
+      @ManyToOne(fetch = FetchType.EAGER)
+      @JoinColumn(name = "team_id", insertable = false, updatable = false)
+      private Team team;
+      ...
+  }
+  ```
+
+  
+
+  ```java
+  Team team = new Team();
+  team.setName("teamA");
+  em.persist(team);
+  
+  Member member = new Member();
+  member.setUsername("memberA");
+  em.persist(member);
+  
+  member.changeTeam(team);
+  
+  em.flush();
+  em.clear();
+  
+  Member findMember = em.find(Member.class, member.getId());
+  
+  System.out.println(findMember.getTeam().getClass());
+  System.out.println("TEAM NAME : " + findMember.getTeam().getName());
+  tx.commit();
+  ```
+
+  실행 쿼리
+
+  ```sql
+  Hibernate: 
+      select
+          member0_.id as id1_4_0_,
+          member0_.createdBy as createdB2_4_0_,
+          member0_.createdDate as createdD3_4_0_,
+          member0_.lastModifiedBy as lastModi4_4_0_,
+          member0_.lastModifiedDate as lastModi5_4_0_,
+          member0_.age as age6_4_0_,
+          member0_.description as descript7_4_0_,
+          member0_.locker_id as locker_10_4_0_,
+          member0_.roleType as roleType8_4_0_,
+          member0_.team_id as team_id11_4_0_,
+          member0_.name as name9_4_0_,
+          locker1_.id as id1_3_1_,
+          locker1_.name as name2_3_1_,
+          team2_.id as id1_8_2_,
+          team2_.createdBy as createdB2_8_2_,
+          team2_.createdDate as createdD3_8_2_,
+          team2_.lastModifiedBy as lastModi4_8_2_,
+          team2_.lastModifiedDate as lastModi5_8_2_,
+          team2_.name as name6_8_2_ 
+      from
+          Member member0_ 
+      left outer join
+          Locker locker1_ 
+              on member0_.locker_id=locker1_.id 
+      left outer join
+          Team team2_ 
+              on member0_.team_id=team2_.id 
+      where
+          member0_.id=?
+  class hello.jpa.Team
+  TEAM NAME : teamA
+  
+  ```
+
+  
+
+  #### 가급적 즉시 로딩을 사용하지 말자.
+
+  - 실무에서는 가급적 지연 로딩(LAZY)만 사용하도록 해야한다.
+
+  - 즉시로딩을 사용하면 예상치 못한 쿼리가 발생한다.
+
+    - 예를들어, 클라이언트는 분명 Member만 조회했을 뿐인데 join 쿼리가 함께 실행된다.
+    - 만약 @ManyToOne 연관관계 매핑이 5개가 있는데 전부 즉시 로딩(EAGER)라고 생각해보자.
+    - Join이 5번 일어난다. 실무에서는 더 많은 테이블이 존재하는데, 엄청난 낭비이다.
+
+  - 즉시로딩은 JPQL을 사용할떄 **N+1 문제**를 일으킨다.
+
+    - N+1 문제란 ? 
+    - 예를들어, 'Select m from Member m' 으로 조회하면 당연히 Member만 select 된다.
+    - Member를 전부 조회하고 보니까 member와 연관관계를 맺은 Team의 fetchType이 EAGER인 것을 확인했다.
+    - LAZY면 프록시 객체를 넣으면 되겠지만, EAGER 타입은 반환하는 시점에 모두 조회가 끝나있어야 한다.
+    - 따라서 Member를 다 가져오고 나서, 그 Member와 연관되어있는 Team을 모두 다시 가져온다.
+
+    - JPQL의 N+1 문제를 아래 코드로 이해해보자.
+
+    ```java
+    Team team1 = new Team();
+    team1.setName("teamA");
+    em.persist(team1);
+    
+    Team team2 = new Team();
+    team2.setName("teamB");
+    em.persist(team2);
+    
+    Member member1 = new Member();
+    member1.setUsername("memberA");
+    em.persist(member1);
+    member1.changeTeam(team1);
+    
+    Member member2 = new Member();
+    member2.setUsername("memberB");
+    em.persist(member2);
+    member2.changeTeam(team2);
+    
+    em.flush();
+    em.clear();
+    
+    List<Member> members = em
+                    .createQuery("select m from Member m", Member.class)
+      .getResultList();
+    ​
+    tx.commit();
+    ```
+
+    위 코드를 실행한 결과 쿼리를 보자.
+
+    ```sql
+    Hibernate: 
+        /* select
+            m 
+        from
+            Member m */ select
+                member0_.id as id1_4_,
+                member0_.createdBy as createdB2_4_,
+                member0_.createdDate as createdD3_4_,
+                member0_.lastModifiedBy as lastModi4_4_,
+                member0_.lastModifiedDate as lastModi5_4_,
+                member0_.age as age6_4_,
+                member0_.description as descript7_4_,
+                member0_.locker_id as locker_10_4_,
+                member0_.roleType as roleType8_4_,
+                member0_.team_id as team_id11_4_,
+                member0_.name as name9_4_ 
+            from
+                Member member0_
+    Hibernate: 
+        select
+            team0_.id as id1_8_0_,
+            team0_.createdBy as createdB2_8_0_,
+            team0_.createdDate as createdD3_8_0_,
+            team0_.lastModifiedBy as lastModi4_8_0_,
+            team0_.lastModifiedDate as lastModi5_8_0_,
+            team0_.name as name6_8_0_ 
+        from
+            Team team0_ 
+        where
+            team0_.id=?
+    Hibernate: 
+        select
+            team0_.id as id1_8_0_,
+            team0_.createdBy as createdB2_8_0_,
+            team0_.createdDate as createdD3_8_0_,
+            team0_.lastModifiedBy as lastModi4_8_0_,
+            team0_.lastModifiedDate as lastModi5_8_0_,
+            team0_.name as name6_8_0_ 
+        from
+            Team team0_ 
+        where
+            team0_.id=?
+    ```
+
+  - 일단 먼저 Member 를 조회해서 가져온다.
+  - 그리고나서 Team 객체를 조회하는 쿼리를 날린다.
+  - **만약 멤버수가 수천 수만명이라고 가정해보자. 추가적으로 Team을 조회하는 쿼리가 수천 수만개가 나가는 것이다.**
+  - 즉 N+1 문제의 의미는, Member 조회 쿼리는 1개 날렸는데, 그것때문에 추가 쿼리가 N개 나간다는 의미이다.
+
+  
+
+  
+
+  #### 정리
+
+  1. 실무에서는 모두 LAZY 전략을 사용하자.
+     - 이 경우, 만약 대부분 비즈니스 로직이 Member와 Team을 함께 사용한다면 ?
+     - 이러한 문제를 해결하기 위해 JPA에서는 Fecth Join과 @EntityGreaph, 배치 사이즈 설정 이라는 것을 지원한다. 추후에 학습해보자.
+  2. @ManyToOne, @OneToOne과 같이 @XXXToOnesms FetchType의 Default값이 EAGER이다.
+     - 따라서, 위 두 전략은 반드시 LAZY로 명시적으로 설정을  해줘야 한다.
+  3. 반대로 @XXXToMany는 FetchType의 Default값이 LAZY다. 손댈필요 없다.
+  4. Member와 Team을 자주 함께 사용한다 -> 즉시로딩 / Member와 Team을 가끔 함께 사용한다 -> 지연로딩
+     - **위와 같은 내용은 매우 이론적인 이야기다. 그냥 LAZY로 사용하자**
+     - 즉시 로딩은 상상하지 못한 쿼리가 나간다.
+
+  
+
+  
   </div>
 </details>
 
